@@ -1,6 +1,5 @@
+<<<<<<< HEAD
 # InsightScholar | Deep Research Explainer
-
-![Landing Page](./screenshots/landing.png)
 
 **InsightScholar** is an advanced AI-powered mentorship platform that deconstructs complex research papers into intuitive, interactive learning experiences. It goes beyond summarization to rebuild a user's mental model of a paper from first principles.
 
@@ -36,21 +35,17 @@ The platform is built on a **Modern Next.js Stack** tailored for high-performanc
 
 ---
 
-## ✨ Key Features & Visuals
+## ✨ Key Features
 
 ### 1. Interactive Architecture Flow
 Users don't just see a static diagram. They interact with a **Live Simulation Stage**.
 -   **Dynamic Nodes**: The system extracts the paper's specific components (e.g., "Encoder", "Attention Head").
 -   **Data Flow**: Hovering over components reveals the logical flow of tensors/information.
 
-![Architecture](./screenshots/architecture.png)
-
 ### 2. Adaptive "Endless" Quiz Mode
 A dedicated **Active Learning Engine** generates unique questions on the fly.
 -   **Difficulty Toggles**: Easy (Recall), Medium (Concept), Hard (Synthesis).
 -   **Mastery Tracking**: Real-time score updates and "Intuition Feedback" for every answer.
-
-![Quiz Mode](./screenshots/quiz.png)
 
 ### 3. Contextual Animation
 Every section features data-driven animations:
@@ -101,3 +96,6 @@ We welcome contributions to the **Reasoning Core** prompts and **Visualization C
 ---
 
 **Built with ❤️ for Science.**
+=======
+# Research-Explainer
+>>>>>>> 9f8c4a0e230e25e17fc320077f39c6da2126d424
