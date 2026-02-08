@@ -23,11 +23,14 @@ import {
   MousePointer2,
   Lock,
   ChevronRight,
-  Plus
+  Plus,
+  BookOpen
 } from 'lucide-react';
 import Mermaid from '@/components/Mermaid';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import AttentionVisualizer from '@/components/AttentionVisualizer';
 import ProblemVisualizer from '@/components/ProblemVisualizer';
 import SectionAnimator from '@/components/SectionAnimator';
@@ -40,6 +43,7 @@ const SECTIONS = [
   { id: 'insight', label: 'The Insight', icon: Lightbulb, color: '#eab308' },
   { id: 'concepts', label: 'Key Concepts', icon: Brain, color: '#8b5cf6' },
   { id: 'system', label: 'The Solution', icon: Settings, color: '#3b82f6' },
+  { id: 'deepDive', label: 'Deep Dive', icon: BookOpen, color: '#f43f5e' },
   { id: 'generalization', label: 'Generalization', icon: ExternalLink, color: '#f97316' },
   { id: 'validation', label: 'Proof', icon: CheckCircle, color: '#10b981' },
   { id: 'mentalModels', label: 'Mental Models', icon: Zap, color: '#06b6d4' },
@@ -55,10 +59,13 @@ export default function Home() {
   const [currentMessage, setCurrentMessage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [paperData, setPaperData] = useState<any>(null); // Start with null
+  const [fullText, setFullText] = useState('');
+  const [deepDiveData, setDeepDiveData] = useState<any>(null);
   const [fileName, setFileName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [animationStep, setAnimationStep] = useState<number | undefined>(undefined);
   const [isClient, setIsClient] = useState(false);
+  const [useVanilla, setUseVanilla] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +94,8 @@ export default function Home() {
   const handleSendMessage = async () => {
     if (!currentMessage.trim() || isProcessing) return;
 
-    const newMessages = [...chatMessages, { role: 'user', content: currentMessage }];
+    const userMsg = currentMessage; // Capture before clearing
+    const newMessages = [...chatMessages, { role: 'user', content: userMsg }];
     setChatMessages(newMessages);
     setCurrentMessage('');
     setIsProcessing(true);
@@ -98,17 +106,99 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: newMessages,
-          paperContext: JSON.stringify(paperData)
+          paperContext: JSON.stringify(paperData),
+          fullText: fullText,
+          useVanilla
         }),
       });
 
       const data = await response.json();
-      setChatMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
+      setChatMessages(prev => [...prev, {
+        role: 'assistant',
+        content: data.text,
+        richContent: data.richContent
+      }]);
+
+      // TRIGGER DEEP DIVE ONLY IF VISUAL CONTENT IS PRESENT
+      if (data.richContent && data.richContent.hasVisual) {
+        setDeepDiveData({
+          question: userMsg,
+          answer: data.text,
+          ...data.richContent
+        });
+        setActiveTab('deepDive');
+        setIsChatOpen(false); // Close chat to focus on the deep dive
+      }
+
     } catch (error) {
       console.error('Chat failed:', error);
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const renderRichContent = (richContent: any) => {
+    if (!richContent) return null;
+
+    return (
+      <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {/* Math Intuition Block */}
+        {richContent.hasMath && richContent.math && (
+          <div className="glass-card" style={{
+            background: 'rgba(139, 92, 246, 0.1)',
+            borderLeft: '4px solid #8b5cf6',
+            padding: '1rem'
+          }}>
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 0 0.5rem 0', color: '#a78bfa' }}>
+              <Brain size={16} /> {richContent.math.title || "Mathematical Intuition"}
+            </h4>
+            <div style={{
+              fontFamily: 'monospace',
+              background: 'rgba(0,0,0,0.3)',
+              padding: '0.75rem',
+              borderRadius: '0.5rem',
+              marginBottom: '0.75rem',
+              color: '#e2e8f0',
+              fontSize: '0.9rem'
+            }}>
+              <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+                {richContent.math.equation}
+              </ReactMarkdown>
+            </div>
+            <p style={{ fontSize: '0.9rem', color: '#cbd5e1', fontStyle: 'italic', margin: 0 }}>
+              {richContent.math.explanation}
+            </p>
+          </div>
+        )}
+
+        {/* Visualizer Block */}
+        {richContent.hasVisual && richContent.visualData && (
+          <div style={{ marginTop: '0.5rem' }}>
+            <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 0 0.5rem 0', color: '#10b981', fontSize: '0.9rem' }}>
+              <Activity size={16} /> Visual Flow
+            </h4>
+            <AttentionVisualizer visualData={richContent.visualData} />
+          </div>
+        )}
+
+        {/* Animation Steps / Timeline */}
+        {richContent.animationSteps && richContent.animationSteps.length > 0 && (
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '0.75rem', padding: '1rem' }}>
+            <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.9rem', color: 'var(--text-dim)' }}>Step-by-Step Logic</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {richContent.animationSteps.map((step: string, i: number) => (
+                <div key={i} style={{ display: 'flex', gap: '0.75rem', fontSize: '0.85rem', color: '#e2e8f0' }}>
+                  <div style={{ minWidth: '1.5rem', height: '1.5rem', background: 'rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>
+                    {i + 1}
+                  </div>
+                  <div>{step}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,8 +221,11 @@ export default function Home() {
       if (data.error || !data.text) {
         // If PDF parsing fails, use the file name as a hint to analyze
         console.warn('PDF parsing failed, using fallback text');
-        await analyzePaper(`Research paper titled: ${file.name}. Please generate a sample analysis structure for a typical research paper.`);
+        const fallbackRaw = `Research paper titled: ${file.name}. Please generate a sample analysis structure for a typical research paper.`;
+        setFullText(fallbackRaw);
+        await analyzePaper(fallbackRaw);
       } else {
+        setFullText(data.text);
         await analyzePaper(data.text);
       }
     } catch (error: any) {
@@ -145,6 +238,107 @@ export default function Home() {
   };
 
   const renderSectionContent = () => {
+    // Handling Deep Dive Section (Special Case)
+    if (activeTab === 'deepDive') {
+      if (!deepDiveData) {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-dim)', textAlign: 'center' }}>
+            <BookOpen size={48} style={{ marginBottom: '1.5rem', opacity: 0.5 }} />
+            <h3>No Deep Dive Active</h3>
+            <p>Ask a "Why" or "How" question in the chat to trigger a deep visual explanation here.</p>
+          </div>
+        );
+      }
+
+      return (
+        <section>
+          <div style={{ marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#f43f5e', textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+              <Activity size={16} /> Reasoning Engine Triggered
+            </div>
+            <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>
+              {deepDiveData.question}
+            </h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            {/* Left Column: Explanation & Math */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              <div className="glass-card" style={{ padding: '2rem' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', color: 'var(--primary)' }}>
+                  <Brain size={20} /> Concept Breakdown
+                </h3>
+                <div style={{ fontSize: '1.1rem', lineHeight: '1.8', color: '#e2e8f0' }}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{deepDiveData.answer}</ReactMarkdown>
+                </div>
+              </div>
+
+              {deepDiveData.hasMath && deepDiveData.math && (
+                <div className="glass-card" style={{ borderLeft: '4px solid #8b5cf6', background: 'rgba(139, 92, 246, 0.05)' }}>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#8b5cf6', marginBottom: '1rem' }}>
+                    <Zap size={20} /> {deepDiveData.math.title || "Mathematical Intuition"}
+                  </h3>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.5rem', borderRadius: '1rem', textAlign: 'center', marginBottom: '1.5rem', fontFamily: 'monospace', fontSize: '1.25rem', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+                      {deepDiveData.math.equation}
+                    </ReactMarkdown>
+                  </div>
+                  <div style={{ color: '#cbd5e1', fontStyle: 'italic', lineHeight: '1.6', fontSize: '1rem' }}>
+                    " {deepDiveData.math.explanation} "
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Visualizer & Timeline */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+              {deepDiveData.hasVisual && deepDiveData.visualData && (
+                <div style={{ position: 'sticky', top: '2rem' }}>
+                  <AttentionVisualizer externalStep={animationStep} visualData={deepDiveData.visualData} />
+
+                  {deepDiveData.animationSteps && (
+                    <div className="glass-card" style={{ marginTop: '2rem', borderTop: '2px solid #10b981' }}>
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                        <Activity size={20} color="#10b981" /> Logic Flow
+                      </h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {deepDiveData.animationSteps.map((step: string, i: number) => (
+                          <motion.button
+                            key={i}
+                            whileHover={{ x: 5, background: 'rgba(255,255,255,0.05)' }}
+                            onClick={() => setAnimationStep(i)}
+                            style={{
+                              display: 'flex', gap: '1rem', alignItems: 'center',
+                              padding: '1rem',
+                              background: animationStep === i ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.02)',
+                              borderRadius: '0.75rem',
+                              border: 'none',
+                              borderLeft: animationStep === i ? '4px solid #10b981' : '4px solid transparent',
+                              textAlign: 'left', cursor: 'pointer', width: '100%', color: 'inherit',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <div style={{
+                              minWidth: '24px', height: '24px', borderRadius: '50%',
+                              background: animationStep === i ? '#10b981' : 'rgba(255,255,255,0.1)',
+                              color: animationStep === i ? 'black' : 'white',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: '0.7rem', fontWeight: 'bold'
+                            }}>{i + 1}</div>
+                            <span style={{ fontSize: '0.9rem', color: animationStep === i ? '#fff' : '#cbd5e1' }}>{step}</span>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )
+    }
+
     if (!paperData) return null;
     const content = paperData[activeTab];
     const section = SECTIONS.find(s => s.id === activeTab);
@@ -169,7 +363,7 @@ export default function Home() {
                   {isClient && <Mermaid chart={content.mermaid} />}
                 </div>
                 <div className="glass-card" style={{ fontSize: '1rem', lineHeight: '1.7', color: '#e2e8f0' }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{content.summary}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{content.summary}</ReactMarkdown>
                 </div>
               </div>
 
@@ -228,7 +422,7 @@ export default function Home() {
                   <Brain size={20} color="var(--accent)" /> Visual Specification
                 </h3>
                 <div style={{ fontSize: '0.9rem', color: 'var(--text-dim)', background: 'rgba(0,0,0,0.2)', padding: '1.25rem', borderRadius: '1rem' }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{content.visualSpec}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{content.visualSpec}</ReactMarkdown>
                 </div>
               </div>
               <div className="glass-card" style={{ borderTop: '2px solid var(--primary)', background: 'rgba(99, 102, 241, 0.05)' }}>
@@ -260,7 +454,7 @@ export default function Home() {
             background: 'rgba(255,255,255,0.02)',
             padding: '2rem'
           }}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{problemText}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{problemText}</ReactMarkdown>
             <ProblemVisualizer data={content} />
           </div>
         </section>
@@ -293,7 +487,7 @@ export default function Home() {
 
           {/* Main Text & List Animation */}
           <div className="glass-card" style={{ padding: '2rem', marginBottom: '2rem' }}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{conceptsText}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{conceptsText}</ReactMarkdown>
             <SectionAnimator type="concepts" data={content} />
           </div>
 
@@ -305,7 +499,7 @@ export default function Home() {
                 {content.math_intuition.title || "Mathematical Intuition"}
               </h3>
 
-              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '0.5rem', textAlign: 'center', marginBottom: '1rem', fontFamily: 'monospace', fontSize: '1.1rem' }}>
+              <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '0.5rem', textAlign: 'center', fontFamily: 'monospace', fontSize: '1.1rem' }}>
                 {content.math_intuition.equation}
               </div>
 
@@ -330,7 +524,7 @@ export default function Home() {
           background: 'rgba(255,255,255,0.02)',
           padding: '2rem'
         }}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
             {typeof content === 'object' && content?.text ? content.text : content}
           </ReactMarkdown>
           <SectionAnimator type={activeTab as any} data={content} />
@@ -560,8 +754,8 @@ export default function Home() {
               position: 'fixed',
               bottom: '100px',
               right: '2rem',
-              width: '450px',
-              height: '600px',
+              width: '600px',
+              height: '700px',
               zIndex: 1000,
               display: 'flex',
               flexDirection: 'column',
@@ -576,13 +770,42 @@ export default function Home() {
                 <Brain size={20} />
                 <h3 style={{ margin: 0, fontSize: '1rem' }}>Research Mentor</h3>
               </div>
-              <button onClick={() => setIsChatOpen(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
-                <X size={20} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', background: 'rgba(0,0,0,0.2)', padding: '0.25rem 0.75rem', borderRadius: '1rem' }}>
+                  <span style={{ opacity: useVanilla ? 0.5 : 1, fontWeight: useVanilla ? 'normal' : 'bold' }}>GPT</span>
+                  <div
+                    onClick={() => setUseVanilla(!useVanilla)}
+                    style={{
+                      width: '32px',
+                      height: '18px',
+                      background: useVanilla ? '#10b981' : '#cbd5e1',
+                      borderRadius: '9px',
+                      position: 'relative',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: useVanilla ? '16px' : '2px',
+                      width: '14px',
+                      height: '14px',
+                      background: 'white',
+                      borderRadius: '50%',
+                      transition: 'all 0.2s'
+                    }} />
+                  </div>
+                  <span style={{ opacity: useVanilla ? 1 : 0.5, fontWeight: useVanilla ? 'bold' : 'normal' }}>Vanilla</span>
+                </div>
+                <button onClick={() => setIsChatOpen(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {chatMessages.map((msg, i) => (
+              {chatMessages.map((msg: any, i) => (
                 <div key={i} style={{
                   alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                   background: msg.role === 'user' ? '#6366f1' : 'rgba(255,255,255,0.05)',
@@ -592,7 +815,8 @@ export default function Home() {
                   fontSize: '0.95rem',
                   lineHeight: '1.6'
                 }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>{msg.content}</ReactMarkdown>
+                  {msg.role === 'assistant' && msg.richContent && renderRichContent(msg.richContent)}
                 </div>
               ))}
               <div ref={chatEndRef} />

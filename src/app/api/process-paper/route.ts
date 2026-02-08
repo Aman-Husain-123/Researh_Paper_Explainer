@@ -12,15 +12,47 @@ export async function POST(req: NextRequest) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        // pdf-parse v2.4.5 exports PDFParse as a named export
-        const { PDFParse } = await import('pdf-parse');
-        const data = await PDFParse(buffer);
+        // pdf-parse import fix
+        const pdfParseModule = await import('pdf-parse');
+
+        let text = '';
+        let metadata = {};
+        let numPages = 0;
+        let info = {};
+
+        // Handle new version (v2.x) which uses a class-based API
+        if (pdfParseModule.PDFParse) {
+            const parser = new pdfParseModule.PDFParse(new Uint8Array(buffer));
+            const result = await parser.getText();
+            text = result.text;
+            numPages = result.total || 0;
+            try {
+                const pdfInfo = await parser.getInfo();
+                info = pdfInfo;
+            } catch (e) {
+                console.warn('Failed to get PDF info:', e);
+            }
+        }
+        // Handle legacy version (v1.x) or versions that export a function
+        else {
+            const pdfParse = (pdfParseModule as any).default || (typeof pdfParseModule === 'function' ? pdfParseModule : null);
+
+            if (typeof pdfParse === 'function') {
+                const data = await pdfParse(buffer);
+                text = data.text;
+                metadata = data.metadata;
+                numPages = data.numpages;
+                info = data.info;
+            } else {
+                throw new Error('pdf-parse: No valid parser found in module');
+            }
+        }
 
         return NextResponse.json({
-            text: data.text,
-            metadata: data.metadata,
-            numPages: data.numpages,
-            info: data.info
+            text,
+            metadata,
+            numPages,
+            info
         });
     } catch (error: any) {
         console.error('PDF processing error:', error);

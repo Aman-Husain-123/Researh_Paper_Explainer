@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Clock, ArrowRight, XCircle, Lightbulb, Brain,
     CheckCircle, Zap, Target, AlertTriangle, TrendingUp,
@@ -74,25 +74,34 @@ export default function SectionAnimator({ type, data }: Props) {
                 {historyData.map((era: HistoryEra, i: number) => (
                     <React.Fragment key={i}>
                         <motion.div
+                            layout
                             animate={{ opacity: step >= i ? 1 : 0.3, scale: step === i ? 1.05 : 1 }}
                             style={{
                                 flex: 1,
                                 textAlign: 'center',
                                 background: step === i ? 'rgba(168, 85, 247, 0.1)' : 'transparent',
-                                padding: '0.8rem',
-                                borderRadius: '0.8rem',
-                                border: step === i ? '1px solid rgba(168, 85, 247, 0.3)' : '1px solid transparent'
+                                padding: '1rem 0.8rem',
+                                borderRadius: '1rem',
+                                border: step === i ? '1px solid rgba(168, 85, 247, 0.5)' : '1px solid transparent',
+                                boxShadow: step === i ? '0 4px 20px rgba(168, 85, 247, 0.2)' : 'none'
                             }}
                         >
-                            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '0.25rem' }}>{era.year}</div>
-                            <div style={{ fontWeight: 'bold', fontSize: '0.8rem', color: step === i ? '#a855f7' : '#fff' }}>{era.method}</div>
-                            <div style={{ fontSize: '0.65rem', marginTop: '0.25rem', color: era.benefit ? '#10b981' : '#ef4444' }}>
-                                {era.benefit || era.limitation}
-                            </div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{era.year}</div>
+                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem', color: step === i ? '#a855f7' : '#fff' }}>{era.method}</div>
+                            {step === i && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    style={{ fontSize: '0.7rem', marginTop: '0.5rem', color: era.benefit ? '#10b981' : '#ef4444' }}
+                                >
+                                    {era.benefit ? <CheckCircle size={12} style={{ display: 'inline', marginRight: 4 }} /> : <XCircle size={12} style={{ display: 'inline', marginRight: 4 }} />}
+                                    {era.benefit || era.limitation}
+                                </motion.div>
+                            )}
                         </motion.div>
                         {i < historyData.length - 1 && (
                             <motion.div animate={{ opacity: step > i ? 1 : 0.2 }}>
-                                <ArrowRight size={16} color="#a855f7" />
+                                <ArrowRight size={20} color="#a855f7" />
                             </motion.div>
                         )}
                     </React.Fragment>
@@ -102,59 +111,75 @@ export default function SectionAnimator({ type, data }: Props) {
     );
 
     const renderFailure = () => (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', marginTop: '1.5rem', padding: '1.5rem', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', marginTop: '2rem', padding: '2rem', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '1.5rem', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
             <motion.div style={{ textAlign: 'center' }}>
-                <div style={{ padding: '0.75rem', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '0.5rem', marginBottom: '0.5rem' }}>
+                <div style={{ padding: '1rem', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', marginBottom: '0.75rem', background: 'rgba(0,0,0,0.2)' }}>
                     {failureData.component}
                 </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Component</div>
             </motion.div>
+
             <motion.div
-                animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }}
-                transition={{ repeat: Infinity, duration: 2 }}
-                style={{ textAlign: 'center', color: '#ef4444' }}
+                animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.2, 1] }}
+                transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                style={{ textAlign: 'center', color: '#ef4444', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
             >
-                <AlertTriangle size={32} />
-                <div style={{ fontSize: '0.7rem', fontWeight: 'bold', marginTop: '0.25rem' }}>{failureData.issue}</div>
+                <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', marginBottom: '0.5rem' }}>
+                    <AlertTriangle size={36} />
+                </div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>{failureData.issue}</div>
             </motion.div>
-            <ArrowRight size={20} color="var(--text-dim)" />
+
+            <ArrowRight size={24} color="var(--text-dim)" />
+
             <motion.div
                 animate={{ opacity: [0.5, 1, 0.5] }}
                 transition={{ duration: 2, repeat: Infinity }}
                 style={{ textAlign: 'center' }}
             >
-                <div style={{ padding: '0.75rem', border: '1px solid #ef4444', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.5rem', marginBottom: '0.5rem', color: '#ef4444' }}>
+                <div style={{ padding: '1rem', border: '1px solid #ef4444', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '1rem', marginBottom: '0.75rem', color: '#ef4444', fontWeight: 'bold' }}>
                     {failureData.consequence}
                 </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Result</div>
             </motion.div>
         </div>
     );
 
     const renderInsight = () => (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem', padding: '0 2rem' }}>
-            <div style={{ textAlign: 'center', opacity: 0.6 }}>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Thought</div>
-                <div style={{ fontWeight: 'bold', textDecoration: 'line-through' }}>{insightData.before}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem', padding: '0 1rem' }}>
+            <div style={{ textAlign: 'center', opacity: 0.5, transform: 'scale(0.9)' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>BEFORE</div>
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '1rem', textDecoration: 'line-through' }}>
+                    {insightData.before}
+                </div>
             </div>
+
             <motion.div
-                animate={{ scale: [1, 1.1, 1], rotate: [0, 360] }}
+                animate={{
+                    scale: [1, 1.1, 1],
+                    boxShadow: ['0 0 0px rgba(234, 179, 8, 0)', '0 0 50px rgba(234, 179, 8, 0.4)', '0 0 0px rgba(234, 179, 8, 0)']
+                }}
                 transition={{ duration: 3, repeat: Infinity }}
                 style={{
                     background: 'linear-gradient(135deg, #eab308, #f59e0b)',
-                    padding: '1.5rem',
+                    padding: '2rem',
                     borderRadius: '50%',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    width: '120px', height: '120px', textAlign: 'center',
-                    boxShadow: '0 0 30px rgba(234, 179, 8, 0.3)'
+                    width: '140px', height: '140px', textAlign: 'center',
+                    zIndex: 10
                 }}
             >
-                <Lightbulb size={24} color="white" />
-                <div style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'white', marginTop: '0.25rem' }}>
+                <Lightbulb size={32} color="white" fill="white" />
+                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'white', marginTop: '0.5rem', lineHeight: '1.2' }}>
                     {insightData["key concept"]}
                 </div>
             </motion.div>
+
             <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Reality</div>
-                <div style={{ fontWeight: 'bold', color: '#10b981' }}>{insightData.after}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)', marginBottom: '0.5rem' }}>AFTER</div>
+                <div style={{ padding: '1rem', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '1rem', color: '#10b981', fontWeight: 'bold' }}>
+                    {insightData.after}
+                </div>
             </div>
         </div>
     );
@@ -164,21 +189,26 @@ export default function SectionAnimator({ type, data }: Props) {
             {conceptList.map((concept: string, i: number) => (
                 <motion.div
                     key={i}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.2 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.15, type: "spring" }}
+                    whileHover={{ scale: 1.05, y: -5 }}
                     style={{
                         padding: '1rem 1.5rem',
-                        background: 'rgba(139, 92, 246, 0.1)',
+                        background: 'linear-gradient(145deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05))',
                         border: '1px solid rgba(139, 92, 246, 0.2)',
                         borderRadius: '0.75rem',
                         color: 'white',
                         fontWeight: 'bold',
                         fontSize: '0.9rem',
-                        display: 'flex', alignItems: 'center', gap: '0.5rem'
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                        cursor: 'default',
+                        boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
                     }}
                 >
-                    <Brain size={16} color="#8b5cf6" />
+                    <div style={{ padding: '0.4rem', background: 'rgba(139, 92, 246, 0.2)', borderRadius: '0.5rem' }}>
+                        <Brain size={16} color="#c4b5fd" />
+                    </div>
                     {concept}
                 </motion.div>
             ))}
@@ -190,17 +220,21 @@ export default function SectionAnimator({ type, data }: Props) {
             {fieldList.map((field: string, i: number) => (
                 <motion.div
                     key={i}
-                    whileHover={{ scale: 1.05 }}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.1 }}
+                    whileHover={{ scale: 1.05, borderColor: '#f97316' }}
                     style={{
                         padding: '1.5rem',
-                        background: 'rgba(249, 115, 22, 0.05)',
-                        border: '1px solid rgba(249, 115, 22, 0.2)',
+                        background: 'rgba(249, 115, 22, 0.03)',
+                        border: '1px solid rgba(249, 115, 22, 0.1)',
                         borderRadius: '1rem',
                         textAlign: 'center',
-                        color: '#f97316'
+                        color: '#f97316',
+                        cursor: 'default'
                     }}
                 >
-                    <Layers size={24} style={{ margin: '0 auto 0.5rem auto' }} />
+                    <Layers size={28} style={{ margin: '0 auto 0.75rem auto', opacity: 0.8 }} />
                     <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{field}</div>
                 </motion.div>
             ))}
@@ -210,16 +244,22 @@ export default function SectionAnimator({ type, data }: Props) {
     const renderValidation = () => (
         <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {metricList.map((m: any, i: number) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.05)', borderRadius: '0.75rem' }}>
+                <motion.div
+                    key={i}
+                    initial={{ x: -20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: i * 0.2 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: 'rgba(16, 185, 129, 0.05)', borderRadius: '0.75rem', border: '1px solid rgba(16, 185, 129, 0.1)' }}
+                >
                     <CheckCircle size={24} color="#10b981" />
                     <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{m.name}</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 'bold', color: 'white' }}>{m.value}</div>
+                        <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'white' }}>{m.value}</div>
                     </div>
                     <div style={{ padding: '0.25rem 0.75rem', background: 'rgba(16, 185, 129, 0.2)', borderRadius: '1rem', fontSize: '0.7rem', color: '#10b981' }}>
                         {m.context}
                     </div>
-                </div>
+                </motion.div>
             ))}
         </div>
     );
@@ -227,13 +267,19 @@ export default function SectionAnimator({ type, data }: Props) {
     const renderMentalModels = () => (
         <div style={{ marginTop: '1.5rem', display: 'grid', gap: '1rem' }}>
             {analogyList.map((a: any, i: number) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '1.25rem', background: 'rgba(6, 182, 212, 0.05)', borderRadius: '1rem', borderLeft: '4px solid #06b6d4' }}>
-                    <Zap size={24} color="#06b6d4" style={{ marginTop: '4px' }} />
-                    <div>
-                        <div style={{ fontWeight: 'bold', color: '#06b6d4', marginBottom: '0.25rem' }}>{a.name}</div>
-                        <div style={{ fontSize: '0.9rem', color: '#cbd5e1' }}>{a.explanation}</div>
+                <motion.div
+                    key={i}
+                    whileHover={{ x: 5 }}
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: '1.25rem', padding: '1.5rem', background: 'rgba(6, 182, 212, 0.05)', borderRadius: '1rem', borderLeft: '4px solid #06b6d4' }}
+                >
+                    <div style={{ padding: '0.5rem', background: 'rgba(6, 182, 212, 0.1)', borderRadius: '0.5rem' }}>
+                        <Zap size={24} color="#06b6d4" />
                     </div>
-                </div>
+                    <div>
+                        <div style={{ fontWeight: 'bold', color: '#06b6d4', marginBottom: '0.5rem', fontSize: '1rem' }}>{a.name}</div>
+                        <div style={{ fontSize: '0.95rem', color: '#e2e8f0', lineHeight: '1.6' }}>{a.explanation}</div>
+                    </div>
+                </motion.div>
             ))}
         </div>
     );
@@ -266,12 +312,13 @@ export default function SectionAnimator({ type, data }: Props) {
                                 color: 'white',
                                 textAlign: 'left',
                                 cursor: 'pointer',
-                                transition: 'all 0.2s'
+                                transition: 'all 0.2s',
+                                position: 'relative'
                             }}
                         >
                             {opt}
-                            {selected === i && i === q.answer && <span style={{ float: 'right', color: '#10b981' }}>Correct!</span>}
-                            {selected === i && i !== q.answer && <span style={{ float: 'right', color: '#ef4444' }}>Try again</span>}
+                            {selected === i && i === q.answer && <CheckCircle size={18} color="#10b981" style={{ position: 'absolute', right: 15, top: '50%', transform: 'translateY(-50%)' }} />}
+                            {selected === i && i !== q.answer && <XCircle size={18} color="#ef4444" style={{ position: 'absolute', right: 15, top: '50%', transform: 'translateY(-50%)' }} />}
                         </button>
                     ))}
                 </div>
